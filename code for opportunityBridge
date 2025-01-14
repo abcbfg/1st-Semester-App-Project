@@ -1,0 +1,811 @@
+// file handling working file basiclast1.cpp without load working 
+#include <iostream>
+#include <windows.h>
+#include <conio.h>
+#include <iomanip>
+#include <limits>
+#include <fstream>
+#include <sstream>
+using namespace std;
+
+// Constants
+const int MAX_STUDENTS = 3;
+const int MAX_ORGS = 3;
+const int MAX_OPPORTUNITIES = 3;
+const int STUDENT_FIELDS = 5; // Name, Email, Password, Age, Education Level
+const int ORG_FIELDS = 3; // Name, Email, Password
+const int OPP_FIELDS = 4; // Name, Target Age, Target Education Level, Organization
+const string STUDENT_FILE = "students.csv";
+const string ORG_FILE = "organizations.csv";
+const string OPP_FILE = "opportunities.csv";
+
+// Function prototypes
+void setConsoleColor();
+void appHeader();
+void functionalOptions(int roleChoice, string students[][STUDENT_FIELDS], int &studentCount, string organizations[][ORG_FIELDS], int &orgCount, string opportunities[][OPP_FIELDS], int &oppCount);
+void subHeaderforStudents();
+void subHeaderforOrganizations();
+bool signUp(int roleChoice, int index, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount, string opportunities[][OPP_FIELDS], int oppCount);
+bool signIn(int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount);
+bool validName(string name, int roleChoice, int currentIndex, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount);
+bool validEmail(string email, int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount);
+bool validPassword(string password);
+bool validAge(int age);
+void displayData(int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount, string opportunities[][OPP_FIELDS], int oppCount);
+void updateData(int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount);
+void deleteData(int roleChoice, string students[][STUDENT_FIELDS], int &studentCount, string organizations[][ORG_FIELDS], int &orgCount);
+void searchOpportunities(string students[][STUDENT_FIELDS], int studentCount, string opportunities[][OPP_FIELDS], int oppCount);
+void applyToOpportunity(string students[][STUDENT_FIELDS], int studentCount, string opportunities[][OPP_FIELDS], int oppCount);
+void filterStudents(string organizations[][ORG_FIELDS], int orgCount, string students[][STUDENT_FIELDS], int studentCount);
+void saveData(string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount, string opportunities[][OPP_FIELDS], int oppCount);
+void loadData(string students[][STUDENT_FIELDS], int &studentCount, string organizations[][ORG_FIELDS], int &orgCount, string opportunities[][OPP_FIELDS], int &oppCount);
+
+
+
+int main()
+{
+    system("cls");
+    appHeader();
+
+    int roleChoice;
+    char continueChoice;
+    char addMoreChoice;
+
+    string students[MAX_STUDENTS][STUDENT_FIELDS];
+    string organizations[MAX_ORGS][ORG_FIELDS];
+    string opportunities[MAX_OPPORTUNITIES][OPP_FIELDS];
+    int studentCount = 0;
+    int orgCount = 0;
+    int oppCount = 0;
+
+    // Load data from files
+    loadData(students, studentCount, organizations, orgCount, opportunities, oppCount);
+
+    do
+    {
+        cout << "\nSelect Role:\n";
+        cout << "1. Student\n";
+        cout << "2. Organization\n";
+        cin >> roleChoice;
+
+        cout << "\nSelect Action:\n";
+        cout << "1. Sign Up\n";
+        cout << "2. Sign In\n";
+        int actionChoice;
+        cin >> actionChoice;
+
+        if (actionChoice == 1)
+        {
+            if (roleChoice == 1)
+            {
+                system("cls");
+                subHeaderforStudents();
+                // Sign up all students first
+                while (studentCount < MAX_STUDENTS)
+                {
+                    cout << "\nEntering data for Student " << studentCount + 1 << endl;
+                    if (!signUp(1, studentCount, students, studentCount, organizations, orgCount, opportunities, oppCount))
+                    {
+                        continue;
+                    }
+                    studentCount++;
+
+                    cout << "\nDo you want to add another student or explore other options? (a: add, e: explore): ";
+                    cin >> addMoreChoice;
+                    if (addMoreChoice == 'e' || addMoreChoice == 'E')
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (roleChoice == 2)
+            {
+                system("cls");
+                subHeaderforOrganizations();
+                // Sign up all organizations
+                while (orgCount < MAX_ORGS)
+                {
+                    cout << "\nEntering data for Organization " << orgCount + 1 << endl;
+                    if (!signUp(2, orgCount, students, studentCount, organizations, orgCount, opportunities, oppCount))
+                    {
+                        continue;
+                    }
+                    orgCount++;
+
+                    cout << "\nDo you want to add another organization or explore other options? (a: add, e: explore): ";
+                    cin >> addMoreChoice;
+                    if (addMoreChoice == 'e' || addMoreChoice == 'E')
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        else if (actionChoice == 2)
+        {
+            if (!signIn(roleChoice, students, studentCount, organizations, orgCount))
+            {
+                continue;
+            }
+        }
+
+        // Show CRUD options
+        functionalOptions(roleChoice, students, studentCount, organizations, orgCount, opportunities, oppCount);
+
+        cout << "\nDo you want to continue? (y/n): ";
+        cin >> continueChoice;
+
+    } while (continueChoice == 'y' || continueChoice == 'Y');
+
+    // Save data to files
+    saveData(students, studentCount, organizations, orgCount, opportunities, oppCount);
+
+    return 0;
+}
+
+
+
+
+bool signUp(int roleChoice, int index, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount, string opportunities[][OPP_FIELDS], int oppCount)
+{
+    string tempName, tempEmail, tempPassword, tempEducationLevel;
+    int tempAge;
+
+    // Get valid name
+    do
+    {
+        cout << "Enter name: ";
+        cin >> tempName;
+        if (!validName(tempName, roleChoice, index, students, studentCount, organizations, orgCount))
+        {
+            cout << "Invalid name or already exists!\n";
+        }
+    } while (!validName(tempName, roleChoice, index, students, studentCount, organizations, orgCount));
+
+    // Get valid email
+    do
+    {
+        cout << "Enter email: ";
+        cin >> tempEmail;
+        if (!validEmail(tempEmail, roleChoice, students, studentCount, organizations, orgCount))
+        {
+            cout << "Invalid email!\n";
+        }
+    } while (!validEmail(tempEmail, roleChoice, students, studentCount, organizations, orgCount));
+
+    // Get valid password
+    do
+    {
+        cout << "Enter password (min 8 chars, 1 upper, 1 lower, 1 special): ";
+        cin >> tempPassword;
+        if (!validPassword(tempPassword))
+        {
+            cout << "Invalid password!\n";
+        }
+    } while (!validPassword(tempPassword));
+
+    // Get valid age
+    do
+    {
+        cout << "Enter your age (for student) ,Enter target age(for orgs):  ";
+        cin >> tempAge;
+        if (cin.fail() || !validAge(tempAge))
+        {
+            cin.clear(); // clear the error flag
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // discard invalid input
+            cout << "Invalid age! Please enter a valid integer.\n";
+        }
+    } while (cin.fail() || !validAge(tempAge));
+
+    // Get education level
+    cout << "Enter your  education level(for student),Enter target education (for orgs) : ";
+    cin >> tempEducationLevel;
+
+    // Store data based on role
+    if (roleChoice == 1)
+    {
+        students[index][0] = tempName;
+        students[index][1] = tempEmail;
+        students[index][2] = tempPassword;
+        students[index][3] = to_string(tempAge);
+        students[index][4] = tempEducationLevel;
+    }
+    else
+    {
+        organizations[index][0] = tempName;
+        organizations[index][1] = tempEmail;
+        organizations[index][2] = tempPassword;
+    }
+
+    cout << "Registration successful!\n";
+    return true;
+}
+
+bool signIn(int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount)
+{
+    string email, password;
+
+    cout << "Enter email: ";
+    cin >> email;
+    cout << "Enter password: ";
+    cin >> password;
+
+    if (roleChoice == 1)
+    {
+        for (int i = 0; i < studentCount; i++)
+        {
+            if (students[i][1] == email && students[i][2] == password)
+            {
+                cout << "Student signed in successfully!\n";
+                return true;
+            }
+        }
+    }
+    else if (roleChoice == 2)
+    {
+        for (int i = 0; i < orgCount; i++)
+        {
+            if (organizations[i][1] == email && organizations[i][2] == password)
+            {
+                cout << "Organization signed in successfully!\n";
+                return true;
+            }
+        }
+    }
+
+    cout << "Invalid email or password!\n";
+    return false;
+}
+
+bool validName(string name, int roleChoice, int currentIndex, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount)
+{
+    if (name.empty())
+        return false;
+
+    if (roleChoice == 1)
+    {
+        for (int i = 0; i < studentCount; i++)
+        {
+            if (students[i][0] == name)
+                return false;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < orgCount; i++)
+        {
+            if (organizations[i][0] == name)
+                return false;
+        }
+    }
+    return true;
+}
+
+bool validEmail(string email, int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount)
+{
+    if (email.empty())
+        return false;
+
+    bool hasAt = false;
+    bool hasDot = false;
+
+    for (char c : email)
+    {
+        if (c == '@')
+            hasAt = true;
+        if (c == '.')
+            hasDot = true;
+    }
+
+    if (!hasAt || !hasDot)
+        return false;
+
+    if (roleChoice == 1)
+    {
+        for (int i = 0; i < studentCount; i++)
+        {
+            if (students[i][1] == email)
+                return false;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < orgCount; i++)
+        {
+            if (organizations[i][1] == email)
+                return false;
+        }
+    }
+    return true;
+}
+
+bool validPassword(string password)
+{
+    if (password.length() < 8)
+    {
+        return false;
+    }
+
+    bool hasUpper = false, hasLower = false, hasSpecial = false;
+    for (size_t i = 0; i < password.length(); i++)
+    {
+        if (isupper(password[i]))
+            hasUpper = true;
+        if (islower(password[i]))
+            hasLower = true;
+        if (!isalnum(password[i]))
+            hasSpecial = true;
+    }
+
+    return hasUpper && hasLower && hasSpecial;
+}
+
+bool validAge(int age)
+{
+    return age > 0;
+}
+
+void displayData(int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount, string opportunities[][OPP_FIELDS], int oppCount)
+{
+    cout << left;
+    cout << setw(20) << "Name" << setw(30) << "Email" << setw(20) << "Password" << setw(10) << "Age" << setw(20) << "Education Level" << endl;
+    cout << string(100, '-') << endl; // Top separator line
+
+    if (roleChoice == 1)
+    {
+        for (int i = 0; i < studentCount; i++)
+        {
+            if (!students[i][0].empty())
+            { // Check if record exists
+                // Print each field with fixed width
+                cout << setw(20) << students[i][0];
+                cout << setw(30) << students[i][1];
+                cout << setw(20) << students[i][2];
+                cout << setw(10) << students[i][3];
+                cout << setw(20) << students[i][4] << endl;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < orgCount; i++)
+        {
+            if (!organizations[i][0].empty())
+            { // Check if record exists
+                // Print each field with fixed width
+                cout << setw(20) << organizations[i][0];
+                cout << setw(30) << organizations[i][1];
+                cout << setw(20) << organizations[i][2] << endl;
+            }
+        }
+    }
+    cout << string(100, '-') << endl; // Bottom separator line
+}
+
+void updateData(int roleChoice, string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount)
+{
+    string name;
+    cout << "Enter name to update: ";
+    cin >> name;
+
+    if (roleChoice == 1)
+    {
+        for (int i = 0; i < studentCount; i++)
+        {
+            if (students[i][0] == name)
+            {
+                cout << "Enter new email: ";
+                cin >> students[i][1];
+                cout << "Enter new password: ";
+                cin >> students[i][2];
+                cout << "Enter new age: ";
+                cin >> students[i][3];
+                cout << "Enter new education level: ";
+                cin >> students[i][4];
+                cout << "Record updated!\n";
+                return;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < orgCount; i++)
+        {
+            if (organizations[i][0] == name)
+            {
+                cout << "Enter new email: ";
+                cin >> organizations[i][1];
+                cout << "Enter new password: ";
+                cin >> organizations[i][2];
+                cout << "Record updated!\n";
+                return;
+            }
+        }
+    }
+}
+
+void deleteData(int roleChoice, string students[][STUDENT_FIELDS], int &studentCount, string organizations[][ORG_FIELDS], int &orgCount)
+{
+    string name;
+    cout << "Enter name to delete: ";
+    cin >> name;
+
+    if (roleChoice == 1)
+    {
+        for (int i = 0; i < studentCount; i++)
+        {
+            if (students[i][0] == name)
+            {
+                for (int j = i; j < studentCount - 1; j++)
+                {
+                    students[j][0] = students[j + 1][0];
+                    students[j][1] = students[j + 1][1];
+                    students[j][2] = students[j + 1][2];
+                    students[j][3] = students[j + 1][3];
+                    students[j][4] = students[j + 1][4];
+                }
+                studentCount--;
+                cout << "Record deleted!\n";
+                return;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < orgCount; i++)
+        {
+            if (organizations[i][0] == name)
+            {
+                for (int j = i; j < orgCount - 1; j++)
+                {
+                    organizations[j][0] = organizations[j + 1][0];
+                    organizations[j][1] = organizations[j + 1][1];
+                    organizations[j][2] = organizations[j + 1][2];
+                }
+                orgCount--;
+                cout << "Record deleted!\n";
+                return;
+            }
+        }
+    }
+}
+
+void searchOpportunities(string students[][STUDENT_FIELDS], int studentCount, string opportunities[][OPP_FIELDS], int oppCount)
+{
+    string studentName;
+    cout << "Enter your name to search for opportunities: ";
+    cin >> studentName;
+
+    for (int i = 0; i < studentCount; i++)
+    {
+        if (students[i][0] == studentName)
+        {
+            int age = stoi(students[i][3]);
+            string educationLevel = students[i][4];
+
+            cout << "Available Opportunities:\n";
+            for (int j = 0; j < oppCount; j++)
+            {
+                int targetAge = stoi(opportunities[j][1]);
+                string targetEducationLevel = opportunities[j][2];
+
+                if (age >= targetAge && educationLevel == targetEducationLevel)
+                {
+                    cout << "Opportunity: " << opportunities[j][0] << " at " << opportunities[j][3] << endl;
+                }
+            }
+            return;
+        }
+    }
+    cout << "Student not found!\n";
+}
+
+void applyToOpportunity(string students[][STUDENT_FIELDS], int studentCount, string opportunities[][OPP_FIELDS], int oppCount)
+{
+    string studentName, opportunityName;
+    cout << "Enter your name to apply for an opportunity: ";
+    cin >> studentName;
+    cout << "Enter the opportunity name: ";
+    cin >> opportunityName;
+
+    for (int i = 0; i < studentCount; i++)
+    {
+        if (students[i][0] == studentName)
+        {
+            for (int j = 0; j < oppCount; j++)
+            {
+                if (opportunities[j][0] == opportunityName)
+                {
+                    cout << "Application successful for " << opportunityName << "!\n";
+                    return;
+                }
+            }
+            cout << "Opportunity not found!\n";
+            return;
+        }
+    }
+    cout << "Student not found!\n";
+}
+
+void filterStudents(string organizations[][ORG_FIELDS], int orgCount, string students[][STUDENT_FIELDS], int studentCount)
+{
+    string orgName;
+    cout << "Enter your organization name to filter students: ";
+    cin >> orgName;
+
+    for (int i = 0; i < orgCount; i++)
+    {
+        if (organizations[i][0] == orgName)
+        {
+            cout << "Available Students:\n";
+            for (int j = 0; j < studentCount; j++)
+            {
+                cout << "Student: " << students[j][0] << ", Age: " << students[j][3] << ", Education Level: " << students[j][4] << endl;
+            }
+            return;
+        }
+    }
+    cout << "Organization not found!\n";
+}
+void functionalOptions(int roleChoice, string students[][STUDENT_FIELDS], int &studentCount, string organizations[][ORG_FIELDS], int &orgCount, string opportunities[][OPP_FIELDS], int &oppCount)
+{
+    int choice;
+    do
+    {
+        cout << "\nSelect Operation:\n";
+        cout << "1. View Records\n";
+        cout << "2. Update Record\n";
+        cout << "3. Delete Record\n";
+        cout << "4. Search Opportunities\n";
+        cout << "5. Apply to Opportunity\n";
+        cout << "6. Filter Students\n";
+        cout << "7. Exit\n";
+        cout << "8. Sign In\n"; // Added Sign In option
+        cin >> choice;
+
+        system("cls");
+
+        switch (choice)
+        {
+            case 1:
+                if (roleChoice == 1)
+                {
+                    subHeaderforStudents();
+                }
+                else if (roleChoice == 2)
+                {
+                    subHeaderforOrganizations();
+                }
+                displayData(roleChoice, students, studentCount, organizations, orgCount, opportunities, oppCount);
+                break;
+            case 2:
+                if (roleChoice == 1)
+                {
+                    subHeaderforStudents();
+                }
+                else if (roleChoice == 2)
+                {
+                    subHeaderforOrganizations();
+                }
+                updateData(roleChoice, students, studentCount, organizations, orgCount);
+                break;
+            case 3:
+                if (roleChoice == 1)
+                {
+                    subHeaderforStudents();
+                }
+                else if (roleChoice == 2)
+                {
+                    subHeaderforOrganizations();
+                }
+                deleteData(roleChoice, students, studentCount, organizations, orgCount);
+                break;
+            case 4:
+                if (roleChoice == 1)
+                {
+                    subHeaderforStudents();
+                    searchOpportunities(students, studentCount, opportunities, oppCount);
+                }
+                else
+                {
+                    cout << "Invalid choice for organization!\n";
+                }
+                break;
+            case 5:
+                if (roleChoice == 1)
+                {
+                    subHeaderforStudents();
+                    applyToOpportunity(students, studentCount, opportunities, oppCount);
+                }
+                else
+                {
+                    cout << "Invalid choice for organization!\n";
+                }
+                break;
+            case 6:
+                if (roleChoice == 2)
+                {
+                    subHeaderforOrganizations();
+                    filterStudents(organizations, orgCount, students, studentCount);
+                }
+                else
+                {
+                    cout << "Invalid choice for student!\n";
+                }
+                break;
+            case 7:
+                cout << "Exiting...\n";
+                return;
+            case 8:
+                if (!signIn(roleChoice, students, studentCount, organizations, orgCount))
+                {
+                    cout << "Sign In failed!\n";
+                }
+                break;
+            default:
+                cout << "Invalid choice. Please try again.\n";
+                break;
+        }
+    } while (true);
+}
+
+void setConsoleColor()
+{
+    // Set the background to white (240) and the text color to blue (1)
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BACKGROUND_BLUE | BACKGROUND_GREEN | BACKGROUND_RED | FOREGROUND_BLUE);
+}
+
+void appHeader()
+{
+    setConsoleColor();
+
+    cout << "******************************************" << endl;
+    cout << "*               @   @   @                *" << endl;
+    cout << "*           @   T   U  N   @             *" << endl;
+    cout << "*         @   R           I  @           *" << endl;
+    cout << "*        @  O               T  @         *" << endl;
+    cout << "*        @  P               Y  @         *" << endl;
+    cout << "*        @  P               B  @         *" << endl;
+    cout << "*          @ O             R  @          *" << endl;
+    cout << "*           @  E  G  D   I  @            *" << endl;
+    cout << "*              @  @  @   @               *" << endl;
+    cout << "******************************************" << endl;
+
+    // Reset color to default after printing
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+}
+
+void subHeaderforStudents()
+{
+    setConsoleColor();
+
+    cout << " ############################## " << endl;
+    cout << " #     STUDENT  INTERFACE     #  " << endl;
+    cout << " ############################## " << endl;
+
+    // Reset color to default after printing
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+}
+
+void subHeaderforOrganizations()
+{
+    setConsoleColor();
+
+    cout << " ################################ " << endl;
+    cout << " #     ORGANIZATION INTERFACE   #  " << endl;
+    cout << " ################################ " << endl;
+
+    // Reset color to default after printing
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+}
+
+void saveData(string students[][STUDENT_FIELDS], int studentCount, string organizations[][ORG_FIELDS], int orgCount, string opportunities[][OPP_FIELDS], int oppCount)
+{
+    // Save students
+    ofstream studentFile(STUDENT_FILE);
+    if (!studentFile.is_open())
+    {
+        cerr << "Error opening file for writing: " << STUDENT_FILE << endl;
+        return;
+    }
+    for (int i = 0; i < studentCount; i++)
+    {
+        for (int j = 0; j < STUDENT_FIELDS; j++)
+        {
+            studentFile << students[i][j];
+            if (j < STUDENT_FIELDS - 1) studentFile << ",";
+        }
+        studentFile << "\n";
+    }
+    studentFile.close();
+
+    // Save organizations
+    ofstream orgFile(ORG_FILE);
+    if (!orgFile.is_open())
+    {
+        cerr << "Error opening file for writing: " << ORG_FILE << endl;
+        return;
+    }
+    for (int i = 0; i < orgCount; i++)
+    {
+        for (int j = 0; j < ORG_FIELDS; j++)
+        {
+            orgFile << organizations[i][j];
+            if (j < ORG_FIELDS - 1) orgFile << ",";
+        }
+        orgFile << "\n";
+    }
+    orgFile.close();
+
+    // Save opportunities
+    ofstream oppFile(OPP_FILE);
+    if (!oppFile.is_open())
+    {
+        cerr << "Error opening file for writing: " << OPP_FILE << endl;
+        return;
+    }
+    for (int i = 0; i < oppCount; i++)
+    {
+        for (int j = 0; j < OPP_FIELDS; j++)
+        {
+            oppFile << opportunities[i][j];
+            if (j < OPP_FIELDS - 1) oppFile << ",";
+        }
+        oppFile << "\n";
+    }
+    oppFile.close();
+}
+
+void loadData(string students[][STUDENT_FIELDS], int &studentCount, string organizations[][ORG_FIELDS], int &orgCount, string opportunities[][OPP_FIELDS], int &oppCount)
+{
+    ifstream inFile("data.csv");
+    string line;
+    string section;
+
+    // Load students
+    getline(inFile, section);
+    if (section == "Students")
+    {
+        while (getline(inFile, line) && !line.empty())
+        {
+            stringstream ss(line);
+            for (int j = 0; j < STUDENT_FIELDS; j++)
+            {
+                getline(ss, students[studentCount][j], ',');
+            }
+            studentCount++;
+        }
+    }
+
+    // Load organizations
+    getline(inFile, section);
+    if (section == "Organizations")
+    {
+        while (getline(inFile, line) && !line.empty())
+        {
+            stringstream ss(line);
+            for (int j = 0; j < ORG_FIELDS; j++)
+            {
+                getline(ss, organizations[orgCount][j], ',');
+            }
+            orgCount++;
+        }
+    }
+
+    // Load opportunities
+    getline(inFile, section);
+    if (section == "Opportunities")
+    {
+        while (getline(inFile, line) && !line.empty())
+        {
+            stringstream ss(line);
+            for (int j = 0; j < OPP_FIELDS; j++)
+            {
+                getline(ss, opportunities[oppCount][j], ',');
+            }
+            oppCount++;
+        }
+    }
+
+    inFile.close();
+}
